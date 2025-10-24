@@ -1,0 +1,2 @@
+id,file_path,transcription,plotas_m2,darbu_tipas,terminas,extracted_data,created_at,plotas,tipas,terminas
+1,data/audio2.mp3,"Sveiki, reikia uolienos imitacijos 35 m² sienai, per savaitę.",35.0,uolienos_imitacija,1 savaitė,"""{\""plotas\"": 35.0, \""tipas\"": \""uolienos_imitacija\"", \""terminas\"": \""1 savait\u0117\""}""",2025-10-22 19:18:20,35.0,uolienos_imitacija,1 savaitė
