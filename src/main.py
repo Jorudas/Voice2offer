@@ -104,3 +104,29 @@ print(offer_text)
 # --- 6. Išsaugome faile ---
 with open("komercinis_pasiulymas.txt", "w", encoding="utf-8") as f:
     f.write(offer_text)
+
+# --- 7. PDF pasiūlymo generavimas ---
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+
+pdf_file = "komercinis_pasiulymas.pdf"
+
+c = canvas.Canvas(pdf_file, pagesize=A4)
+width, height = A4
+
+# Antraštė
+c.setFont("Helvetica-Bold", 16)
+c.drawString(100, height - 80, "KOMERCINIS PASIŪLYMAS")
+
+# Turinys
+c.setFont("Helvetica", 12)
+y = height - 120
+
+lines = offer_text.split("\n")
+for line in lines:
+    c.drawString(100, y, line)
+    y -= 18
+
+# Išsaugome PDF
+c.save()
+print(f"\nPDF pasiūlymas išsaugotas kaip: {pdf_file}")
