@@ -1,17 +1,17 @@
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
-from sqlalchemy.sql import func
-from .db import Base
+from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+import datetime
 
-class VoiceMessage(Base):
-    __tablename__ = "voice_messages"
+Base = declarative_base()
 
-    id = Column(Integer, primary_key=True, index=True)
-    file_path = Column(String, nullable=False)
-    transcription = Column(String, nullable=True)
-    extracted_data = Column(String, nullable=True)
-    plotas_m2 = Column(Float, nullable=True)
-    darbu_tipas = Column(String, nullable=True)
-    terminas = Column(String, nullable=True)
-    extracted_data = Column(JSON, nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
+class Offer(Base):
+    __tablename__ = "offers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    decor = Column(String)
+    area = Column(Float)
+    price_per_m2 = Column(Float)
+    total_sum = Column(Float)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    file_path = Column(String)
