@@ -11,6 +11,11 @@ from reportlab.lib.enums import TA_LEFT
 import datetime
 import os
 
+# --- SQLAlchemy importai ---
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models import Offer
+
 # Registruojame šriftą
 pdfmetrics.registerFont(TTFont('Arial', 'C:/Windows/Fonts/arial.ttf'))
 
@@ -33,18 +38,17 @@ def generate_offer(data):
     c = canvas.Canvas(file_name, pagesize=A4)
     width, height = A4
 
-    # --- Logotipas (dešinėje virš projekto informacijos) ---
+    # --- Logotipas ---
     logo_path = os.path.join(os.path.dirname(__file__), "data", "logo.png")
 
     if os.path.exists(logo_path):
         print(f"Logotipas įkeltas iš: {logo_path}")
-        # Paveikslo vieta – apie puslapio viršutinį trečdalį, dešinėje pusėje
         c.drawImage(
             logo_path,
-            width - 8*cm,   # horizontalus atstumas nuo kairio krašto
-            height - 7*cm, # vertikalus atstumas nuo viršaus
-            width=6*cm,     # logotipo plotis
-            height=4*cm,    # logotipo aukštis
+            width - 8*cm,
+            height - 7*cm,
+            width=6*cm,
+            height=4*cm,
             preserveAspectRatio=True
         )
     else:
@@ -59,7 +63,7 @@ def generate_offer(data):
     c.setFont("Arial", 12)
     c.drawString(2*cm, height - 3*cm, "KOMERCINIS PASIŪLYMAS")
 
-    # --- Apskaičiuojame kainas (tik kintamieji, be išvedimo) ---
+    # --- Apskaičiuojame kainas ---
     price_list = {
         "Uolienos imitacija": 450,
         "Marmuro tinkas": 40,
@@ -89,13 +93,10 @@ def generate_offer(data):
     c.drawString(2*cm, y, f"Kaina už 1 m²: {base_price:.2f} €")
     y -= 0.7*cm
 
-
     # --- Lentele su kainomis ---
     y -= 1.3*cm
     c.setFont("Arial", 12)
     c.drawString(2*cm, y, "Kainų skaičiavimas:")
-
-    c.setFont("Arial", 12)
     y -= 1*cm
     c.drawString(2*cm, y, f"Suma EUR: {suma:.2f} €")
     y -= 0.6*cm
@@ -108,12 +109,11 @@ def generate_offer(data):
     c.setFont("Arial", 12)
     c.drawString(2*cm, y, "Pastabos:")
 
-    # Paruošiame stilių su automatinio laužymo parama
     style = ParagraphStyle(
         name="Normal",
         fontName="Arial",
         fontSize=11,
-        leading=14,  # tarp eilučių
+        leading=14,
         alignment=TA_LEFT
     )
 
@@ -127,9 +127,9 @@ def generate_offer(data):
     y -= 0.3*cm
     for note in notes:
         paragraph = Paragraph(note, style)
-        w, h = paragraph.wrap(16*cm, 2*cm)  # gauk realų teksto aukštį
+        w, h = paragraph.wrap(16*cm, 2*cm)
         paragraph.drawOn(c, 2*cm, y - h)
-        y -= h + 0.2*cm  # 0.4 cm buvo tarpas tarp pastabų, dabar 0.2 cm
+        y -= h + 0.2*cm
 
     # --- Kontaktinė informacija ---
     y -= 2*cm
@@ -150,16 +150,38 @@ def generate_offer(data):
     c.setFont("Arial", 10)
     c.drawString(2*cm, 2*cm, f"Parengta: {today}")
 
+    # --- Išsaugome PDF ---
     c.save()
     print(f"✅ PDF pasiūlymas sėkmingai išsaugotas: {file_name}")
 
+    # --- Įrašome į DB ---
+    try:
+        engine = create_engine("sqlite:///test_offer.db")
+        Session = sessionmaker(bind=engine)
+        session = Session()
 
-# Testavimo blokas (vykdomas tik jei paleidi šį failą tiesiogiai)
+        offer = Offer(
+            decor=dekoras,
+            area=m2,
+            price_per_m2=base_price,
+            total_sum=bendra,
+            file_path=file_name
+        )
+
+        session.add(offer)
+        session.commit()
+        session.close()
+        print("💾 Pasiūlymas sėkmingai įrašytas į DB.")
+
+    except Exception as e:
+        print(f"⚠️ Klaida įrašant į DB: {e}")
+
+
+# --- Testavimas ---
 if __name__ == "__main__":
     test_data = {
         "plotas_m2": 35,
         "dekoras": "Uolienos imitacija",
         "vieta": "Siena"
     }
-
     generate_offer(test_data)
