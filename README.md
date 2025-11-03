@@ -63,9 +63,8 @@ Autorius
 
 Kęstutis Jorudas
 AI & Interior Design Enthusiast
-El. paštas: labas@marmurotinkas.lt
+El. paštas: kestutis.jorudas@gmail.com 
 
-Tinklalapis: marmurotinkas.lt
 
 Licencija
 
