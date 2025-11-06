@@ -165,7 +165,7 @@ def generate_offer(data):
             area=m2,
             price_per_m2=base_price,
             total_sum=bendra,
-            file_path=file_name
+            file_path=os.path.basename(file_name)
         )
 
         session.add(offer)

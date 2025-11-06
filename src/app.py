@@ -1,19 +1,22 @@
 
 # src/app.py
+import whisper
+import os
+import soundfile as sf
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models import Offer
 from offer_generator import generate_offer
-from plots import generate_model_plots   # <-- vietoje show_model_plots
+from plots import generate_model_plots
 
 DB_PATH = "voice2offer.db"
 
 st.set_page_config(page_title="Voice2Offer - Mini UI", layout="centered")
 
-# ✅ Sukuriame du puslapius
-tab1, tab2 = st.tabs(["💼 Pasiūlymų generatorius", "📊 Modelių analizė"])
+# ✅ Sukuriame 3 puslapius
+tab1, tab2, tab3 = st.tabs(["💼 Pasiūlymų generatorius", "📊 Modelių analizė", "🎧 Garso įkėlimas"])
 
 # =========================================================
 # ✅ TAB 1 – Pasiūlymų generatorius (TAVO ESAMAS KODAS)
@@ -100,3 +103,84 @@ with tab2:
 
             st.subheader("📊 Sumų pasiskirstymo histograma")
             st.pyplot(fig3)
+
+
+# =========================================================
+# ✅ TAB 3 – Garso įrašymas ir PDF automatinis generavimas
+# =========================================================
+from audiorecorder import audiorecorder
+import os
+from voice_pipeline import transcribe_audio, create_offer_from_text
+
+DB_PATH = "voice2offer.db"
+
+with tab3:
+    st.title("🎧 Garso įrašymas arba įkėlimas")
+    st.write("Įrašykite arba įkelkite balso įrašą – automatiškai transkribuosime, išanalizuosime ir sukursime PDF + įrašą į DB.")
+
+    # --------- 1) Įrašas naršyklėje ----------
+    st.subheader("🎤 Įrašyti balsą")
+    audio = audiorecorder("🎙 Pradėti įrašymą", "⏹ Sustabdyti")
+
+    if audio and len(audio) > 0:
+        st.audio(audio.raw_data, format="audio/wav")
+        record_path = "temp_record.wav"
+        audio.export(record_path, format="wav")
+        st.success("✅ Įrašas sėkmingai padarytas!")
+
+        with st.spinner("⏳ Transkribuojame ir generuojame pasiūlymą..."):
+            text = transcribe_audio(record_path, lang="lt")
+            st.write("### 📝 Išgautas tekstas:")
+            st.write(text)
+
+            result = create_offer_from_text(text, db_path=DB_PATH)
+
+        st.success("✅ Pasiūlymas automatiškai sukurtas!")
+        st.write(f"**PDF:** {result['pdf_path']}")
+        st.write(f"**Suma:** {result['total_sum']:.2f} €")
+
+        try:
+            with open(result["pdf_path"], "rb") as f:
+                st.download_button("📥 Atsisiųsti PDF", data=f, file_name=os.path.basename(result["pdf_path"]), mime="application/pdf")
+        except:
+            st.warning("⚠ Nepavyko pateikti PDF atsisiuntimui.")
+
+        try:
+            os.remove(record_path)
+        except:
+            pass
+
+    st.divider()
+
+    # --------- 2) Įkelti garso failą ----------
+    st.subheader("📂 Įkelti garso failą")
+    uploaded_file = st.file_uploader("Pasirinkite WAV/MP3/FLAC", type=["wav", "mp3", "flac"])
+
+    if uploaded_file is not None:
+        st.audio(uploaded_file, format="audio/wav")
+
+        temp_path = "temp_uploaded_audio.wav"
+        with open(temp_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        with st.spinner("⏳ Transkribuojame ir generuojame pasiūlymą..."):
+            text = transcribe_audio(temp_path, lang="lt")
+            st.write("### 📝 Išgautas tekstas:")
+            st.write(text)
+
+            result = create_offer_from_text(text, db_path=DB_PATH)
+
+        st.success("✅ Pasiūlymas automatiškai sukurtas!")
+        st.write(f"**PDF:** {result['pdf_path']}")
+        st.write(f"**Suma:** {result['total_sum']:.2f} €")
+
+        try:
+            with open(result["pdf_path"], "rb") as f:
+                st.download_button("📥 Atsisiųsti PDF", data=f, file_name=os.path.basename(result["pdf_path"]), mime="application/pdf")
+        except:
+            st.warning("⚠ Nepavyko pateikti PDF atsisiuntimui.")
+
+        try:
+            os.remove(temp_path)
+        except:
+            pass
