@@ -11,3 +11,6 @@ __pycache__/
 
 # Ignore old or temp files
 main_old.py
+
+# Ignore environment key file
+.env
