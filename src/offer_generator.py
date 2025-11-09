@@ -144,7 +144,7 @@ def generate_offer(data, db_path="voice2offer.db"):
 
         os.rename(temp_path, final_path)
 
-        offer.file_path = final_path
+        offer.file_path = final_name
         session.commit()
 
     finally:

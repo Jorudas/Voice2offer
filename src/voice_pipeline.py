@@ -145,7 +145,7 @@ def normalize_offer_fields(data: Dict) -> Dict:
     elif "grind" in t_vieta:
         vieta = "Grindys"
     else:
-        vieta = "Neaišku"
+        vieta = "Sienos paviršius"
 
     plotas = data.get("plotas_m2")
     try:

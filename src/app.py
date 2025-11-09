@@ -5,6 +5,7 @@ import os
 import soundfile as sf
 import streamlit as st
 import pandas as pd
+import base64
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models import Offer
@@ -19,7 +20,7 @@ st.set_page_config(page_title="Voice2Offer - Mini UI", layout="centered")
 tab1, tab2, tab3 = st.tabs(["💼 Pasiūlymų generatorius", "📊 Modelių analizė", "🎧 Garso įkėlimas"])
 
 # =========================================================
-# ✅ TAB 1 – Pasiūlymų generatorius (TAVO ESAMAS KODAS)
+# ✅ TAB 1 – Pasiūlymų generatorius
 # =========================================================
 with tab1:
     st.title("Voice2Offer - komercinių pasiūlymų generatorius")
@@ -29,7 +30,8 @@ with tab1:
     with st.form("new_offer"):
         dekoras = st.selectbox(
             "Dekoras",
-            ["Uolienos imitacija", "Marmuro tinkas", "Kalkinis tinkas", "Lygus dekoras", "Betono imitacija", "Struktūrinis dekoras", "Tradicinis tinkas"],
+            ["Uolienos imitacija", "Marmuro tinkas", "Kalkinis tinkas",
+             "Lygus dekoras", "Betono imitacija", "Struktūrinis dekoras", "Tradicinis tinkas"],
             index=1
         )
         plotas_m2 = st.number_input("Plotas, m²", min_value=0.0, step=1.0, value=20.0)
@@ -44,72 +46,88 @@ with tab1:
         st.write(f"**PDF failas:** {result['pdf_path']}")
         st.write(f"**Bendra suma:** {result['total_sum']:.2f} €")
 
-        # ✅ PDF ATSISIUNTIMO MYGTUKAS
-        try:
-            with open(result["pdf_path"], "rb") as f:
-                st.download_button(
-                    label="📥 Atsisiųsti PDF",
-                    data=f,
-                    file_name=result["pdf_path"].split("\\")[-1],
-                    mime="application/pdf"
-                )
-        except:
-            st.warning("⚠️ Nepavyko įkelti PDF atsisiuntimui (gal failas ne tame kataloge?)")
+        with open(result["pdf_path"], "rb") as f:
+            st.download_button(
+                label="📥 Atsisiųsti PDF",
+                data=f,
+                file_name=os.path.basename(result["pdf_path"]),
+                mime="application/pdf"
+            )
 
-    # ✅ Lentelė iš DB
+    # ✅ Lentelė iš DB su atsisiuntimu
     st.divider()
-    st.subheader("Esami pasiūlymai (iš DB)")
+    st.subheader("Esami pasiūlymai duomenų bazėje")
 
     engine = create_engine(f"sqlite:///{DB_PATH}")
     with Session(engine) as session:
         rows = session.query(Offer).order_by(Offer.id.desc()).all()
 
-    data = []
+    table_data = []
     for r in rows:
-        data.append({
+        # Reali PDF vieta
+        pdf_folder = os.path.join(os.path.dirname(__file__), "..", "pdf")
+        full_path = os.path.join(pdf_folder, r.file_path)
+
+        # ✅ vietoje neveikiančio HTML – grąžiname mygtuko placeholderį
+        if os.path.exists(full_path):
+            download_html = f"__BTN__{r.id}"
+        else:
+            download_html = "❌ Failas nerastas"
+
+        table_data.append({
             "ID": r.id,
             "DEKORAVIMO TIPAS": r.decor,
-            "KIEKIS_m2": r.area,
-            "KAINA_EUR_be_PVM": r.price_per_m2,
-            "SUMA_EUR_su_PVM": r.total_sum,
-            "Sukurta": getattr(r, "created_at", None)
+            "KIEKIS m²": r.area,
+            "KAINA EUR be PVM": r.price_per_m2,
+            "SUMA EUR su PVM": r.total_sum,
+            "Sukurta": getattr(r, "created_at", None),
+            "Atsisiųsti": download_html
         })
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(table_data)
 
-    # ✅ Pridedame mygtukus: Peržiūrėti PDF ir Atsisiųsti
-    def file_buttons(row):
-        # Sukuriame failo pavadinimą
-        pdf_name = f"Pasiūlymas #{row['ID']} ({str(row['Sukurta']).split()[0]}).pdf" if row["Sukurta"] else f"Pasiūlymas #{row['ID']}.pdf"
-
-        # Pilnas kelias iki failo
-        full_path = os.path.join(os.getcwd(), "pdf", pdf_name)
-
-        # Jei failas egzistuoja
-        if os.path.exists(full_path):
-            # Peržiūrėjimo nuoroda
-            view_link = f'<a target="_blank" href="file:///{full_path}">👁️ Peržiūrėti</a>'
-
-            # Atsisiuntimo mygtukas
-            with open(full_path, "rb") as f:
-                download_button = st.download_button(
-                    label="💾 Atsisiųsti",
-                    data=f,
-                    file_name=pdf_name,
-                    mime="application/pdf",
-                    key=f"dl_{row['ID']}"
-                )
-
-            return view_link + " | " + download_button
-
-        return "❌ Failas nerastas"
-
-    # ✅ Sukuriame stulpelį 'Veiksmai'
-    df["Veiksmai"] = df.apply(file_buttons, axis=1)
-
-    st.write(df)
+    st.write("")
     
 
+    # ✅ Stulpelių pavadinimai
+    header1, header2, header3, header4, header5, header6, header7 = st.columns([1, 3, 2, 2, 2, 3, 3])
+    header1.write("ID")
+    header2.write("DEKORAVIMO TIPAS")
+    header3.write("KIEKIS m²")
+    header4.write("KAINA EUR be PVM")
+    header5.write("SUMA EUR su PVM")
+    header6.write("Sukurta")
+    header7.write("Atsisiųsti")
+    st.markdown("---")  
+
+    # ✅ Realiai atvaizduojame lentelę su mygtukais
+    for i, row in df.iterrows():
+        col1, col2, col3, col4, col5, col6, col7 = st.columns([1, 3, 2, 2, 2, 3, 3])
+
+        col1.write(row["ID"])
+        col2.write(row["DEKORAVIMO TIPAS"])
+        col3.write(row["KIEKIS m²"])
+        col4.write(row["KAINA EUR be PVM"])
+        col5.write(row["SUMA EUR su PVM"])
+        col6.write(row["Sukurta"])
+
+        pdf_folder = os.path.join(os.path.dirname(__file__), "..", "pdf")
+        full_path = os.path.join(pdf_folder, rows[i].file_path)
+
+        if os.path.exists(full_path):
+            with col7:
+                with open(full_path, "rb") as f:
+                    st.download_button(
+                        label="💾",
+                        data=f,
+                        file_name=rows[i].file_path,
+                        mime="application/pdf",
+                        key=f"dl_{i}"
+                    )
+        else:
+            col7.write("❌")
+
+        st.markdown("---")
 
 # =========================================================
 # ✅ TAB 2 – ML/NN grafikai
