@@ -16,18 +16,27 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Offer
 
-# Registruojame šriftą (Windows)
 try:
     pdfmetrics.registerFont(TTFont('Arial', 'C:/Windows/Fonts/arial.ttf'))
 except Exception:
-    pass  # jei nepavyksta – naudos ReportLab default
+    pass
+
 
 def generate_offer(data, db_path="voice2offer.db"):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
-    base_dir = os.path.dirname(os.path.dirname(__file__))  # projekto šaknis
-    file_name = os.path.join(base_dir, f"komercinis_pasiulymas_{timestamp}.pdf")
 
-    c = canvas.Canvas(file_name, pagesize=A4)
+    # Sukuriame /pdf aplanką
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    pdf_dir = os.path.join(base_dir, "pdf")
+    if not os.path.exists(pdf_dir):
+        os.makedirs(pdf_dir)
+
+    # Laikinas failas kol nežinome ID
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+    temp_name = f"komercinis_pasiulymas_{timestamp}.pdf"
+    temp_path = os.path.join(pdf_dir, temp_name)
+
+    # ---- PDF GENERAVIMAS ---
+    c = canvas.Canvas(temp_path, pagesize=A4)
     width, height = A4
 
     logo_path = os.path.join(os.path.dirname(__file__), "data", "logo.png")
@@ -58,8 +67,8 @@ def generate_offer(data, db_path="voice2offer.db"):
     mokestis = round(suma * 0.21, 2)
     bendra = round(suma + mokestis, 2)
 
-    c.setFont("Arial", 12)
     y = height - 4.8*cm
+    c.setFont("Arial", 12)
     c.drawString(2*cm, y, f"Darbo tipas: {dekoras}")
     y -= 0.7*cm
     c.drawString(2*cm, y, f"Dekoruojama vieta: {data.get('vieta', '')}")
@@ -69,7 +78,6 @@ def generate_offer(data, db_path="voice2offer.db"):
     c.drawString(2*cm, y, f"Kaina už 1 m²: {base_price:.2f} €")
 
     y -= 1.3*cm
-    c.setFont("Arial", 12)
     c.drawString(2*cm, y, "Kainų skaičiavimas:")
     y -= 1*cm
     c.drawString(2*cm, y, f"Suma EUR: {suma:.2f} €")
@@ -85,8 +93,8 @@ def generate_offer(data, db_path="voice2offer.db"):
     style = ParagraphStyle(name="Normal", fontName="Arial", fontSize=11, leading=14, alignment=TA_LEFT)
     notes = [
         "• Už atliktus darbus išrašoma ne PVM sąskaita faktūra.",
-        "• Kiekiai gali keistis po faktinių plokštumų išmatavimų ir jei darbų eigoje bus nuspręsta dekoruoti papildomus, iš anksto nenumatytus plotus.",
-        "• Papildomas 21 % mokestis taikomas individualios veiklos mokesčiams padengti."
+        "• Kiekiai gali keistis po faktinių išmatavimų.",
+        "• Papildomas 21% mokestis taikomas veiklos mokesčiams."
     ]
 
     y -= 0.3*cm
@@ -114,21 +122,32 @@ def generate_offer(data, db_path="voice2offer.db"):
 
     c.save()
 
-    # Įrašas į DB
+    # ✅ Įrašas į DB
     engine = create_engine(f"sqlite:///{db_path}")
     Session = sessionmaker(bind=engine)
     session = Session()
+
     try:
         offer = Offer(
             decor=dekoras,
             area=m2,
             price_per_m2=base_price,
             total_sum=bendra,
-            file_path=file_name
+            file_path=""
         )
         session.add(offer)
         session.commit()
+
+        # ✅ Čia jau turime offer.id – dabar galutinis failo pavadinimas su data ir ID
+        final_name = f"pasiulymas_ID{offer.id}_{timestamp}.pdf"
+        final_path = os.path.join(pdf_dir, final_name)
+
+        os.rename(temp_path, final_path)
+
+        offer.file_path = final_path
+        session.commit()
+
     finally:
         session.close()
 
-    return {"pdf_path": file_name, "total_sum": bendra}
+    return {"pdf_path": final_path, "total_sum": bendra}

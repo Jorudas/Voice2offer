@@ -68,16 +68,47 @@ with tab1:
     for r in rows:
         data.append({
             "ID": r.id,
-            "Dekoras": r.decor,
-            "Plotas_m2": r.area,
-            "Kaina_m2": r.price_per_m2,
-            "Suma": r.total_sum,
-            "Failas": r.file_path,
+            "DEKORAVIMO TIPAS": r.decor,
+            "KIEKIS_m2": r.area,
+            "KAINA_EUR_be_PVM": r.price_per_m2,
+            "SUMA_EUR_su_PVM": r.total_sum,
             "Sukurta": getattr(r, "created_at", None)
         })
 
     df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True)
+
+    # ✅ Pridedame mygtukus: Peržiūrėti PDF ir Atsisiųsti
+    def file_buttons(row):
+        # Sukuriame failo pavadinimą
+        pdf_name = f"Pasiūlymas #{row['ID']} ({str(row['Sukurta']).split()[0]}).pdf" if row["Sukurta"] else f"Pasiūlymas #{row['ID']}.pdf"
+
+        # Pilnas kelias iki failo
+        full_path = os.path.join(os.getcwd(), "pdf", pdf_name)
+
+        # Jei failas egzistuoja
+        if os.path.exists(full_path):
+            # Peržiūrėjimo nuoroda
+            view_link = f'<a target="_blank" href="file:///{full_path}">👁️ Peržiūrėti</a>'
+
+            # Atsisiuntimo mygtukas
+            with open(full_path, "rb") as f:
+                download_button = st.download_button(
+                    label="💾 Atsisiųsti",
+                    data=f,
+                    file_name=pdf_name,
+                    mime="application/pdf",
+                    key=f"dl_{row['ID']}"
+                )
+
+            return view_link + " | " + download_button
+
+        return "❌ Failas nerastas"
+
+    # ✅ Sukuriame stulpelį 'Veiksmai'
+    df["Veiksmai"] = df.apply(file_buttons, axis=1)
+
+    st.write(df)
+    
 
 
 # =========================================================
