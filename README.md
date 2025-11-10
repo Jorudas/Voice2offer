@@ -1,72 +1,79 @@
 Voice2Offer
 
-Voice2Offer – tai dirbtinio intelekto projektas, skirtas automatiškai generuoti PDF komercinius pasiūlymus iš balso žinučių.
-Sistema apdoroja naudotojo balso įrašą, atpažįsta informaciją (pvz., dekorą, plotą, kainą), išsaugo duomenis duomenų bazėje ir suformuoja profesionalų PDF pasiūlymą.
+Voice2Offer – dirbtinio intelekto sistema, skirta automatiškai generuoti PDF komercinius pasiūlymus iš balso įrašų.
+Sistema apdoroja naudotojo balsą, atpažįsta esminę informaciją, išsaugo ją duomenų bazėje ir automatiškai sukuria profesionalų PDF pasiūlymą.
+
+
 
 Pagrindinė idėja
 
-Projektas kuriamas kaip praktinė dirbtinio intelekto taikymo sistema dekoratyvinio tinkavimo verslui.
-Tikslas – sumažinti rankinio darbo kiekį, automatizuoti pasiūlymų rengimą ir pagerinti komunikacijos greitį tarp kliento ir tiekėjo.
+Projektas sukurtas kaip realaus verslo automatizavimo sprendimas dekoratyvinio tinkavimo rinkai.
+Sistema sumažina rankinio darbo kiekį, pagreitina pasiūlymų rengimą ir palengvina komunikaciją tarp kliento ir tiekėjo.
+Naudotojui užtenka įrašyti balso žinutę – visa kita padaroma automatiškai.
+
+
 
 Naudojamos technologijos
 
-Balso atpažinimui naudojamas OpenAI Whisper modelis.
-Duomenų valdymui – SQLAlchemy ORM, leidžiantis patogiai kurti ir valdyti SQLite duomenų bazę.
-Dokumentų generavimui naudojama ReportLab biblioteka, su kuria sistema automatiškai kuria PDF pasiūlymus su logotipu, informacija ir kainų lentele.
-Visa sistema sukurta naudojant Python 3.12 programavimo kalbą.
+Paskirtis	Technologija
+Balso atpažinimas	OpenAI Whisper (speech-to-text)
+Teksto analizė ir duomenų išgavimas	GPT-5
+DB valdymas	SQLAlchemy ORM + SQLite
+PDF generavimas	ReportLab
+Vartotojo sąsaja	Streamlit
+Programavimo kalba	Python 3.12
+
+
+
+Sistemos veikimo principas
+
+Naudotojas įkelia garso įrašą arba įrašo balsu.
+Whisper modelis transkribuoja kalbą į tekstą.
+GPT-5 iš teksto išgauna reikiamus duomenis (plotas, dekoras, vieta).
+Duomenys automatiškai įrašomi į SQLite DB.
+Sugeneruojamas PDF komercinis pasiūlymas.
+Vartotojas gali atsisiųsti PDF arba peržiūrėti istoriją sistemoje.
+Visa logika vyksta vienu paspaudimu.
+
+
+
 
 Projekto struktūra
 
-Projekte yra atskiras src aplankas su visais pagrindiniais moduliais:
+src/
+ ├─ app.py                 # Streamlit vartotojo sąsaja
+ ├─ voice_pipeline.py      # Whisper → GPT-5 → JSON → DB procesas
+ ├─ offer_generator.py     # PDF pasiūlymo generavimas (ReportLab)
+ ├─ db.py                  # DB inicijavimas, ryšys, Session
+ ├─ models.py              # SQLAlchemy ORM lentelės
+ ├─ data_extractor.py      # Teksto analizė per GPT-5
+ ├─ plots.py               # ML grafikų generavimas
+ ├─ ml_model.py            # Paprastas ML modelis
+ ├─ nn_train.py            # Neuroninio tinklo treniravimas
+ └─ whisper_test.py        # Whisper testai
 
-data aplankas (logotipas, garso failai)
 
-db.py ir models.py failai (duomenų bazės struktūra ir ORM klasės)
-
-main_offer_generator.py (PDF pasiūlymo kūrimas)
-
-main_db_insert_offer.py (duomenų įrašymas į DB)
-
-main_db_read_offer.py (įrašų nuskaitymas)
-
-main_db_test_offer.py (DB testavimas)
-
-whisper_test.py (balso atpažinimo testai)
 
 Pagrindinės funkcijos
 
-• Transkribuoja balso žinutę į tekstą.
-• Atpažįsta plotą, dekorą, kainą ir kitus pasiūlymo duomenis.
-• Įrašo duomenis į SQLite duomenų bazę.
-• Automatiškai sugeneruoja PDF komercinį pasiūlymą su logotipu ir kainų lentele.
-• Leidžia peržiūrėti visus įrašus duomenų bazėje.
+✔ Transkribuoja balso žinutę į tekstą
+✔ Automatiškai išgauna plotą, dekorą, lokaciją
+✔ Įrašo duomenis į SQLite DB
+✔ Sugeneruoja profesionalų PDF (logotipas, lentelės, kaina)
+✔ Leidžia atsisiųsti pasiūlymą
+✔ Parodo visų pasiūlymų istoriją Streamlit lange
 
-Testavimas
 
-Projektas testuotas lokaliai per Visual Studio Code terminalą.
-Naudotos komandos:
 
-python main_db_test_offer.py – patikrina duomenų bazės lenteles
 
-python main_db_insert_offer.py – prideda testinį įrašą
+Lokalus testavimas
 
-python main_db_read_offer.py – išveda visus įrašus iš DB
+python main_db_init.py       # sukuria DB
+python main_db_insert_offer.py
+python main_db_read_offer.py
+python main_offer_generator.py
 
-python main_offer_generator.py – sugeneruoja PDF pasiūlymą
 
-Išvestis
-
-Sugeneruotas PDF automatiškai išsaugomas projekto šakniniame kataloge, pavyzdžiui:
-komercinis_pasiulymas_2025-11-03_15-59.pdf
 
 Autorius
-
 Kęstutis Jorudas
-AI & Interior Design Enthusiast
-El. paštas: kestutis.jorudas@gmail.com 
-
-
-Licencija
-
-Projektas skirtas edukaciniams ir moksliniams tikslams (diplominis darbas).
-Visos teisės saugomos © 2025 Kęstutis Jorudas.
